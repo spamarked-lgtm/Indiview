@@ -52,6 +52,7 @@ export interface Story {
   articles: Article[];
   entities: string[]; // Extracted via NER
   topic: string; // e.g., Politics, Business
+  imageUrl?: string;
 }
 
 export type ViewState = 'feed' | 'blindspots' | 'story_detail';

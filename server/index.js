@@ -5,16 +5,16 @@ import { DB_SEED_DATA } from './seed.js';
 
 const app = express();
 const PORT = 3001;
+
+// Use 'verbose()' to get better stack traces
 const sql = sqlite3.verbose();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
 // Initialize SQLite Database
-// In production, this would be a persistent file (e.g., './news_data.db')
-// For this demo setup, we use :memory: or a temporary file that gets re-seeded.
-const db = new sql.Database(':memory:', (err) => {
+// Using a file path './news_data.db' ensures data persists between restarts
+const db = new sql.Database('./news_data.db', (err) => {
     if (err) {
         console.error('Error opening database', err.message);
     } else {
@@ -23,7 +23,6 @@ const db = new sql.Database(':memory:', (err) => {
     }
 });
 
-// Database Initialization
 function initDb() {
     db.serialize(() => {
         // Create Stories Table
@@ -52,52 +51,62 @@ function initDb() {
             FOREIGN KEY(story_id) REFERENCES stories(id)
         )`);
 
-        // Seed Data
-        const stmtStory = db.prepare("INSERT OR IGNORE INTO stories VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        const stmtArticle = db.prepare("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ?, ?, ?)");
-
-        DB_SEED_DATA.forEach(story => {
-            stmtStory.run([
-                story.id,
-                story.title,
-                story.summary,
-                story.ai_summary,
-                story.topic,
-                story.total_sources,
-                story.last_updated,
-                story.bias_dist,
-                story.blindspot,
-                story.entities,
-                story.image_url
-            ]);
-
-            // Generate dummy articles for the story based on source_ids
-            story.source_ids.forEach((sid, idx) => {
-                stmtArticle.run([
-                    `art-${story.id}-${idx}`,
-                    story.id,
-                    sid,
-                    `${story.title} - ${idx % 2 === 0 ? 'Report' : 'Coverage'}`,
-                    '#',
-                    new Date().toISOString()
-                ]);
-            });
+        // Check if data exists, if not, seed it
+        db.get("SELECT count(*) as count FROM stories", [], (err, row) => {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            if (row.count === 0) {
+                console.log("Database empty, seeding data...");
+                seedData();
+            } else {
+                console.log("Database already contains data, skipping seed.");
+            }
         });
-
-        stmtStory.finalize();
-        stmtArticle.finalize();
-        console.log('Database seeded with initial data.');
     });
 }
 
-// Routes
+function seedData() {
+    const stmtStory = db.prepare("INSERT OR IGNORE INTO stories VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const stmtArticle = db.prepare("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ?, ?, ?)");
 
-// Health Check
+    DB_SEED_DATA.forEach(story => {
+        stmtStory.run([
+            story.id,
+            story.title,
+            story.summary,
+            story.ai_summary,
+            story.topic,
+            story.total_sources,
+            story.last_updated,
+            story.bias_dist,
+            story.blindspot,
+            story.entities,
+            story.image_url
+        ]);
+
+        story.source_ids.forEach((sid, idx) => {
+            stmtArticle.run([
+                `art-${story.id}-${idx}`,
+                story.id,
+                sid,
+                `${story.title} - ${idx % 2 === 0 ? 'Report' : 'Coverage'}`,
+                '#',
+                new Date().toISOString()
+            ]);
+        });
+    });
+
+    stmtStory.finalize();
+    stmtArticle.finalize();
+}
+
+// Routes
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Get Stories
 app.get('/api/stories', (req, res) => {
     const filter = req.query.filter || 'all';
     let query = "SELECT * FROM stories";
@@ -116,49 +125,50 @@ app.get('/api/stories', (req, res) => {
             return;
         }
 
-        // We need to fetch articles for each story to match the frontend type signature
-        // In a real app, this might be a JOIN or separate load, but for now:
-        const stories = await Promise.all(rows.map(async (row) => {
-            const articles = await new Promise((resolve, reject) => {
-                db.all("SELECT * FROM articles WHERE story_id = ?", [row.id], (err, aRows) => {
-                    if (err) reject(err);
-                    else resolve(aRows);
+        try {
+            const stories = await Promise.all(rows.map(async (row) => {
+                const articles = await new Promise((resolve, reject) => {
+                    db.all("SELECT * FROM articles WHERE story_id = ?", [row.id], (err, aRows) => {
+                        if (err) reject(err);
+                        else resolve(aRows || []);
+                    });
                 });
-            });
 
-            return {
-                id: row.id,
-                title: row.title,
-                summary: row.summary,
-                aiSummaryPoints: JSON.parse(row.ai_summary),
-                topic: row.topic,
-                totalSources: row.total_sources,
-                lastUpdated: row.last_updated,
-                biasDistribution: JSON.parse(row.bias_dist),
-                blindspot: row.blindspot,
-                entities: JSON.parse(row.entities),
-                imageUrl: row.image_url,
-                articles: articles.map(a => ({
-                    id: a.id,
-                    storyId: a.story_id,
-                    sourceId: a.source_id,
-                    title: a.title,
-                    url: a.url,
-                    timestamp: a.timestamp
-                }))
-            };
-        }));
+                return {
+                    id: row.id,
+                    title: row.title,
+                    summary: row.summary,
+                    aiSummaryPoints: JSON.parse(row.ai_summary || '[]'),
+                    topic: row.topic,
+                    totalSources: row.total_sources,
+                    lastUpdated: row.last_updated,
+                    biasDistribution: JSON.parse(row.bias_dist || '{}'),
+                    blindspot: row.blindspot,
+                    entities: JSON.parse(row.entities || '[]'),
+                    imageUrl: row.image_url,
+                    articles: articles.map(a => ({
+                        id: a.id,
+                        storyId: a.story_id,
+                        sourceId: a.source_id,
+                        title: a.title,
+                        url: a.url,
+                        timestamp: a.timestamp
+                    }))
+                };
+            }));
 
-        // Mock 'top' filter logic by slicing
-        if (filter === 'top') {
-             res.json(stories.slice(2, 6));
-        } else {
-             res.json(stories);
+            if (filter === 'top') {
+                 res.json(stories.slice(2, 6));
+            } else {
+                 res.json(stories);
+            }
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Failed to process stories' });
         }
     });
 });
 
-// Get Single Story
 app.get('/api/stories/:id', (req, res) => {
     const id = req.params.id;
     db.get("SELECT * FROM stories WHERE id = ?", [id], (err, row) => {
@@ -181,15 +191,15 @@ app.get('/api/stories/:id', (req, res) => {
                 id: row.id,
                 title: row.title,
                 summary: row.summary,
-                aiSummaryPoints: JSON.parse(row.ai_summary),
+                aiSummaryPoints: JSON.parse(row.ai_summary || '[]'),
                 topic: row.topic,
                 totalSources: row.total_sources,
                 lastUpdated: row.last_updated,
-                biasDistribution: JSON.parse(row.bias_dist),
+                biasDistribution: JSON.parse(row.bias_dist || '{}'),
                 blindspot: row.blindspot,
-                entities: JSON.parse(row.entities),
+                entities: JSON.parse(row.entities || '[]'),
                 imageUrl: row.image_url,
-                articles: articles.map(a => ({
+                articles: (articles || []).map(a => ({
                     id: a.id,
                     storyId: a.story_id,
                     sourceId: a.source_id,

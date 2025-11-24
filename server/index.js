@@ -1,19 +1,16 @@
-import express from 'express';
-import sqlite3 from 'sqlite3';
-import cors from 'cors';
-import { DB_SEED_DATA } from './seed.js';
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const cors = require('cors');
+const { DB_SEED_DATA } = require('./seed.js');
 
 const app = express();
 const PORT = 3001;
-
-// Use 'verbose()' to get better stack traces
-const sql = sqlite3.verbose();
 
 app.use(cors());
 app.use(express.json());
 
 // Initialize SQLite Database
-const db = new sql.Database('./news_data.db', (err) => {
+const db = new sqlite3.Database('./news_data.db', (err) => {
     if (err) {
         console.error('Error opening database', err.message);
     } else {
@@ -30,7 +27,6 @@ function initDb() {
     db.serialize(() => {
         // Drop tables if they exist to ensure schema update during development
         db.run("DROP TABLE IF EXISTS articles");
-        db.run("DROP TABLE IF EXISTS stories"); // Cleanup old table
         db.run("DROP TABLE IF EXISTS clusters"); 
 
         // Create Clusters Table
@@ -80,7 +76,7 @@ function initDb() {
                 console.error(err);
                 return;
             }
-            if (row.count === 0) {
+            if (row && row.count === 0) {
                 console.log("Database empty, seeding data...");
                 seedData();
             } else {
@@ -197,22 +193,30 @@ app.get('/api/stories', (req, res) => {
             const stories = await Promise.all(rows.map(async (row) => {
                 const articles = await new Promise((resolve, reject) => {
                     db.all("SELECT * FROM articles WHERE cluster_id = ?", [row.cluster_id], (err, aRows) => {
-                        if (err) reject(err);
+                        if (err) resolve([]); // Resolve empty array on error to prevent crash
                         else resolve(aRows || []);
                     });
                 });
+
+                // Safe parsing helper
+                const safeParse = (str, fallback) => {
+                    try { return JSON.parse(str || JSON.stringify(fallback)); } 
+                    catch (e) { return fallback; }
+                };
+
+                const biasDist = safeParse(row.bias_distribution, { left: 0, center: 0, right: 0 });
 
                 return {
                     id: row.cluster_id,
                     title: row.topic_label,
                     summary: row.summary,
-                    aiSummaryPoints: JSON.parse(row.ai_summary || '[]'),
+                    aiSummaryPoints: safeParse(row.ai_summary, []),
                     topic: row.category,
                     totalSources: row.source_count,
                     lastUpdated: row.updated_at, 
-                    biasDistribution: JSON.parse(row.bias_distribution || '{}'),
+                    biasDistribution: biasDist,
                     blindspot: row.blindspot,
-                    entities: JSON.parse(row.topic_keywords || '[]'),
+                    entities: safeParse(row.topic_keywords, []),
                     imageUrl: row.image_url,
                     articles: articles.map(a => ({
                         id: a.article_id,
@@ -224,8 +228,8 @@ app.get('/api/stories', (req, res) => {
                         timestamp: a.published_at,
                         summary: a.summary,
                         language: a.language,
-                        nerEntities: JSON.parse(a.ner_entities || '[]'),
-                        embeddingVector: JSON.parse(a.embedding_vector || '[]') // Mapped correctly
+                        nerEntities: safeParse(a.ner_entities, []),
+                        embeddingVector: safeParse(a.embedding_vector, [])
                     }))
                 };
             }));
@@ -261,17 +265,25 @@ app.get('/api/stories/:id', (req, res) => {
                 return;
             }
 
+            // Safe parsing helper
+            const safeParse = (str, fallback) => {
+                try { return JSON.parse(str || JSON.stringify(fallback)); } 
+                catch (e) { return fallback; }
+            };
+
+            const biasDist = safeParse(row.bias_distribution, { left: 0, center: 0, right: 0 });
+
             const story = {
                 id: row.cluster_id,
                 title: row.topic_label,
                 summary: row.summary,
-                aiSummaryPoints: JSON.parse(row.ai_summary || '[]'),
+                aiSummaryPoints: safeParse(row.ai_summary, []),
                 topic: row.category,
                 totalSources: row.source_count,
                 lastUpdated: row.updated_at,
-                biasDistribution: JSON.parse(row.bias_distribution || '{}'),
+                biasDistribution: biasDist,
                 blindspot: row.blindspot,
-                entities: JSON.parse(row.topic_keywords || '[]'),
+                entities: safeParse(row.topic_keywords, []),
                 imageUrl: row.image_url,
                 articles: (articles || []).map(a => ({
                     id: a.article_id,
@@ -283,8 +295,8 @@ app.get('/api/stories/:id', (req, res) => {
                     timestamp: a.published_at,
                     summary: a.summary,
                     language: a.language,
-                    nerEntities: JSON.parse(a.ner_entities || '[]'),
-                    embeddingVector: JSON.parse(a.embedding_vector || '[]')
+                    nerEntities: safeParse(a.ner_entities, []),
+                    embeddingVector: safeParse(a.embedding_vector, [])
                 }))
             };
             res.json(story);

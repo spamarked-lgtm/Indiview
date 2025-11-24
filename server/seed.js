@@ -1,4 +1,4 @@
-export const DB_SEED_DATA = [
+const DB_SEED_DATA = [
   {
     cluster_id: 'story-hero-1',
     created_at: new Date().toISOString(),
@@ -11,7 +11,6 @@ export const DB_SEED_DATA = [
     source_count: 394,
     language_distribution: JSON.stringify({ en: 100 }),
     is_active: 1,
-    // UI specific
     ai_summary: JSON.stringify(['DOGE to shut down 8 months early.', 'Musk claims mission accomplished.', 'Critics argue substantial waste remains.']),
     category: 'US Politics',
     blindspot: null,
@@ -30,7 +29,6 @@ export const DB_SEED_DATA = [
     source_count: 45,
     language_distribution: JSON.stringify({ en: 90, hi: 10 }),
     is_active: 1,
-    // UI specific
     ai_summary: JSON.stringify(['Targeted strike in Beirut suburbs.', 'At least five killed, 28 wounded.', 'Escalation in Israel-Hezbollah conflict.']),
     category: 'Israel-Gaza',
     blindspot: null,
@@ -49,7 +47,6 @@ export const DB_SEED_DATA = [
     source_count: 9,
     language_distribution: JSON.stringify({ en: 100 }),
     is_active: 1,
-    // UI specific
     ai_summary: JSON.stringify(['Shutdown cost estimated at $11 billion.', 'Economy remains resilient.', 'Inflation cooling down.']),
     category: 'Business & Markets',
     blindspot: null,
@@ -68,7 +65,6 @@ export const DB_SEED_DATA = [
     source_count: 355,
     language_distribution: JSON.stringify({ en: 100 }),
     is_active: 0,
-    // UI specific
     ai_summary: JSON.stringify(['Resignation effective next month.', 'Cites irreconcilable differences.', 'Speculation on future political career.']),
     category: 'US Politics',
     blindspot: null,
@@ -87,7 +83,6 @@ export const DB_SEED_DATA = [
     source_count: 10,
     language_distribution: JSON.stringify({ en: 100 }),
     is_active: 1,
-    // UI specific
     ai_summary: JSON.stringify(['Zelenskyy meets US officials.', 'Discusses future aid packages.', 'Emphasizes bipartisan support.']),
     category: 'Ukraine War',
     blindspot: 'Right',
@@ -106,7 +101,6 @@ export const DB_SEED_DATA = [
     source_count: 120,
     language_distribution: JSON.stringify({ en: 100 }),
     is_active: 1,
-    // UI specific
     ai_summary: JSON.stringify(['Move debated for years.', 'Potential diplomatic fallout.', 'Support from certain allies.']),
     category: 'World',
     blindspot: 'Left',
@@ -125,7 +119,6 @@ export const DB_SEED_DATA = [
     source_count: 45,
     language_distribution: JSON.stringify({ en: 100 }),
     is_active: 1,
-    // UI specific
     ai_summary: JSON.stringify(['Protestors blocked factory entrance.', 'Police arrested 12 individuals.', 'Activists claim factory supplies IDF.']),
     category: 'Israel-Gaza',
     blindspot: 'Right',
@@ -133,3 +126,5 @@ export const DB_SEED_DATA = [
     source_ids: ['the-wire', 'scroll', 'ndtv']
   }
 ];
+
+module.exports = { DB_SEED_DATA };

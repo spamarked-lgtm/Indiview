@@ -1,4 +1,4 @@
-const DB_SEED_DATA = [
+export const DB_SEED_DATA = [
   {
     id: 'story-hero-1',
     title: 'Trump’s Government Efficiency Department Disbands Eight Months Before Mandate Ends',
@@ -98,5 +98,3 @@ const DB_SEED_DATA = [
     source_ids: ['the-wire', 'scroll', 'ndtv']
   }
 ];
-
-module.exports = { DB_SEED_DATA };

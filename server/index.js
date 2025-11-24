@@ -1,10 +1,11 @@
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const cors = require('cors');
-const { DB_SEED_DATA } = require('./seed');
+import express from 'express';
+import sqlite3 from 'sqlite3';
+import cors from 'cors';
+import { DB_SEED_DATA } from './seed.js';
 
 const app = express();
 const PORT = 3001;
+const sql = sqlite3.verbose();
 
 // Middleware
 app.use(cors());
@@ -13,7 +14,7 @@ app.use(express.json());
 // Initialize SQLite Database
 // In production, this would be a persistent file (e.g., './news_data.db')
 // For this demo setup, we use :memory: or a temporary file that gets re-seeded.
-const db = new sqlite3.Database(':memory:', (err) => {
+const db = new sql.Database(':memory:', (err) => {
     if (err) {
         console.error('Error opening database', err.message);
     } else {

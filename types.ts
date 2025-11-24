@@ -19,10 +19,17 @@ export interface Source {
 export interface Article {
   id: string;
   sourceId: string;
+  sourceName?: string;
   title: string;
   url: string;
   timestamp: string;
   summary?: string;
+  content?: string;
+  imageUrl?: string;
+  language?: string;
+  nerEntities?: string[];
+  embeddingVector?: number[];
+  storyId?: string; // Corresponds to cluster_id
 }
 
 export interface BiasDistribution {

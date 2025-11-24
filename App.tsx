@@ -20,6 +20,7 @@ const App: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [currentStory, setCurrentStory] = useState<Story | undefined>(undefined);
+  const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1000';
 
   // Initialize Backend Connection
   useEffect(() => {
@@ -82,9 +83,9 @@ const App: React.FC = () => {
     <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleStoryClick(story.id)}>
         <h3 className="text-xl font-bold text-gray-900 mb-4">Daily Briefing</h3>
         <div className="relative aspect-video w-full rounded-md overflow-hidden mb-3">
-             <img src={story.imageUrl} alt={story.title} className="w-full h-full object-cover" />
+             <img src={story.imageUrl || DEFAULT_IMAGE} alt={story.title} className="w-full h-full object-cover" />
              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                 7 stories • 10m read
+                 {story.totalSources} stories • 10m read
              </div>
         </div>
         <h4 className="font-bold text-lg leading-tight mb-2 hover:text-indigo-600">{story.title}</h4>
@@ -106,7 +107,7 @@ const App: React.FC = () => {
             <div className="flex gap-2 text-[10px] text-gray-500 uppercase font-semibold mb-1">
                 <span>{story.topic}</span>
                 <span>•</span>
-                <span>{story.entities[0]}</span>
+                <span>{story.entities?.[0]}</span>
             </div>
             <h4 className="font-bold text-sm leading-snug text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
                 {story.title}
@@ -124,15 +125,15 @@ const App: React.FC = () => {
   const HeroCard = ({ story }: { story: Story }) => (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer group mb-6 relative" onClick={() => handleStoryClick(story.id)}>
         <div className="relative aspect-[16/9] w-full">
-            <img src={story.imageUrl} alt={story.title} className="w-full h-full object-cover brightness-95 group-hover:brightness-100 transition-all duration-500" />
+            <img src={story.imageUrl || DEFAULT_IMAGE} alt={story.title} className="w-full h-full object-cover brightness-95 group-hover:brightness-100 transition-all duration-500" />
             <div className="absolute top-3 right-3 text-white/80 hover:text-white">
                 <Info size={20} />
             </div>
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6 pt-20">
                 <div className="flex items-center gap-2 text-xs text-gray-300 mb-2">
-                    <span>{story.totalSources} stories</span>
+                    <span>{story.totalSources} sources</span>
                     <span>•</span>
-                    <span>{story.articles.length * 12} articles</span>
+                    <span>{story.articles?.length || 0} articles available</span>
                     <span>•</span>
                     <span>{story.lastUpdated}</span>
                 </div>
@@ -151,7 +152,7 @@ const App: React.FC = () => {
         <div className="flex gap-4 py-6 border-b border-gray-100 last:border-0 cursor-pointer group" onClick={() => handleStoryClick(story.id)}>
              <div className="flex-1">
                 <div className="flex items-center gap-2 text-[10px] text-gray-500 uppercase font-semibold mb-1.5">
-                    <span>{story.entities[0]}</span>
+                    <span>{story.entities?.[0]}</span>
                     <span>•</span>
                     <span>{story.topic}</span>
                 </div>
@@ -164,7 +165,7 @@ const App: React.FC = () => {
                 </div>
              </div>
              <div className="w-24 h-24 sm:w-32 sm:h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                <img src={story.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img src={story.imageUrl || DEFAULT_IMAGE} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
              </div>
         </div>
     );
@@ -173,7 +174,7 @@ const App: React.FC = () => {
   const BlindspotCard = ({ story }: { story: Story }) => (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleStoryClick(story.id)}>
         <div className="relative h-32 overflow-hidden">
-             <img src={story.imageUrl} alt="" className="w-full h-full object-cover" />
+             <img src={story.imageUrl || DEFAULT_IMAGE} alt="" className="w-full h-full object-cover" />
              <div className="absolute top-0 left-0 w-full h-full bg-black/10"></div>
              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-xs font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
                 {story.blindspot === 'Left' ? 'No coverage from Left' : 'Low coverage from Right'}
@@ -358,7 +359,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stories.blindspot.map(story => (
                     <div key={story.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer" onClick={() => handleStoryClick(story.id)}>
-                        <img src={story.imageUrl} className="w-full h-48 object-cover"/>
+                        <img src={story.imageUrl || DEFAULT_IMAGE} className="w-full h-48 object-cover"/>
                         <div className="p-4">
                              <h3 className="font-bold text-lg mb-2">{story.title}</h3>
                              <BiasStrip distribution={story.biasDistribution} variant="blindspot" />

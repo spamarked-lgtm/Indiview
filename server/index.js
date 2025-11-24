@@ -13,46 +13,69 @@ app.use(cors());
 app.use(express.json());
 
 // Initialize SQLite Database
-// Using a file path './news_data.db' ensures data persists between restarts
 const db = new sql.Database('./news_data.db', (err) => {
     if (err) {
         console.error('Error opening database', err.message);
     } else {
         console.log('Connected to the SQLite database.');
-        initDb();
+        // Enable Foreign Keys
+        db.run("PRAGMA foreign_keys = ON", (err) => {
+             if (err) console.error("Failed to enable foreign keys:", err);
+             else initDb();
+        });
     }
 });
 
 function initDb() {
     db.serialize(() => {
-        // Create Stories Table
-        db.run(`CREATE TABLE IF NOT EXISTS stories (
-            id TEXT PRIMARY KEY,
-            title TEXT,
+        // Drop tables if they exist to ensure schema update during development
+        db.run("DROP TABLE IF EXISTS articles");
+        db.run("DROP TABLE IF EXISTS stories"); // Cleanup old table
+        db.run("DROP TABLE IF EXISTS clusters"); 
+
+        // Create Clusters Table
+        db.run(`CREATE TABLE IF NOT EXISTS clusters (
+            cluster_id TEXT PRIMARY KEY,
+            created_at TEXT,
+            updated_at TEXT,
+            topic_label TEXT,
+            topic_keywords TEXT,
+            representative_embedding TEXT,
+            article_ids TEXT,
             summary TEXT,
-            ai_summary TEXT,
-            topic TEXT,
-            total_sources INTEGER,
-            last_updated TEXT,
-            bias_dist TEXT,
+            bias_distribution TEXT,
+            source_count INTEGER,
+            language_distribution TEXT,
+            is_active INTEGER,
+            
+            -- UI Support Columns
+            image_url TEXT,
             blindspot TEXT,
-            entities TEXT,
-            image_url TEXT
+            ai_summary TEXT,
+            category TEXT
         )`);
 
         // Create Articles Table
         db.run(`CREATE TABLE IF NOT EXISTS articles (
-            id TEXT PRIMARY KEY,
-            story_id TEXT,
+            article_id TEXT PRIMARY KEY,
             source_id TEXT,
+            source_name TEXT,
+            source_url TEXT,
             title TEXT,
-            url TEXT,
-            timestamp TEXT,
-            FOREIGN KEY(story_id) REFERENCES stories(id)
+            summary TEXT,
+            content TEXT,
+            published_at TEXT,
+            collected_at TEXT,
+            image_url TEXT,
+            language TEXT,
+            ner_entities TEXT,
+            embedding_vector TEXT,
+            cluster_id TEXT,
+            FOREIGN KEY(cluster_id) REFERENCES clusters(cluster_id) ON DELETE CASCADE
         )`);
 
         // Check if data exists, if not, seed it
-        db.get("SELECT count(*) as count FROM stories", [], (err, row) => {
+        db.get("SELECT count(*) as count FROM clusters", [], (err, row) => {
             if (err) {
                 console.error(err);
                 return;
@@ -68,38 +91,82 @@ function initDb() {
 }
 
 function seedData() {
-    const stmtStory = db.prepare("INSERT OR IGNORE INTO stories VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    const stmtArticle = db.prepare("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ?, ?, ?)");
+    const stmtCluster = db.prepare(`
+        INSERT OR IGNORE INTO clusters (
+            cluster_id, created_at, updated_at, topic_label, topic_keywords, 
+            representative_embedding, article_ids, summary, bias_distribution, 
+            source_count, language_distribution, is_active, 
+            image_url, blindspot, ai_summary, category
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
 
-    DB_SEED_DATA.forEach(story => {
-        stmtStory.run([
-            story.id,
-            story.title,
-            story.summary,
-            story.ai_summary,
-            story.topic,
-            story.total_sources,
-            story.last_updated,
-            story.bias_dist,
-            story.blindspot,
-            story.entities,
-            story.image_url
-        ]);
+    const stmtArticle = db.prepare(`
+        INSERT OR IGNORE INTO articles (
+            article_id, source_id, source_name, source_url, title, summary, content, 
+            published_at, collected_at, image_url, language, ner_entities, 
+            embedding_vector, cluster_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
 
-        story.source_ids.forEach((sid, idx) => {
-            stmtArticle.run([
-                `art-${story.id}-${idx}`,
-                story.id,
-                sid,
-                `${story.title} - ${idx % 2 === 0 ? 'Report' : 'Coverage'}`,
-                '#',
-                new Date().toISOString()
+    // Helper to map source IDs to nice names
+    const getSourceName = (id) => {
+        const map = {
+            'the-hindu': 'The Hindu', 'ndtv': 'NDTV', 'the-wire': 'The Wire',
+            'indian-express': 'Indian Express', 'times-of-india': 'Times of India',
+            'republic-world': 'Republic World', 'opindia': 'OpIndia', 'scroll': 'Scroll.in',
+            'zee-news': 'Zee News', 'hindustan-times': 'Hindustan Times', 'news18': 'News18'
+        };
+        return map[id] || id;
+    };
+
+    db.serialize(() => {
+        DB_SEED_DATA.forEach(cluster => {
+            // Generate article IDs
+            const generatedArticleIds = cluster.source_ids.map((_, idx) => `art-${cluster.cluster_id}-${idx}`);
+
+            stmtCluster.run([
+                cluster.cluster_id,
+                cluster.created_at,
+                cluster.updated_at,
+                cluster.topic_label,
+                cluster.topic_keywords,
+                cluster.representative_embedding,
+                JSON.stringify(generatedArticleIds),
+                cluster.summary,
+                cluster.bias_distribution,
+                cluster.source_count,
+                cluster.language_distribution,
+                cluster.is_active,
+                cluster.image_url,
+                cluster.blindspot,
+                cluster.ai_summary,
+                cluster.category
             ]);
-        });
-    });
 
-    stmtStory.finalize();
-    stmtArticle.finalize();
+            cluster.source_ids.forEach((sid, idx) => {
+                stmtArticle.run([
+                    `art-${cluster.cluster_id}-${idx}`,       // article_id
+                    sid,                                      // source_id (internal)
+                    getSourceName(sid),                       // source_name
+                    '#',                                      // source_url
+                    `${cluster.topic_label}: ${getSourceName(sid)} Coverage`, // title
+                    cluster.summary,                          // summary
+                    'Full content not available in seed...',  // content
+                    new Date().toISOString(),                 // published_at
+                    new Date().toISOString(),                 // collected_at
+                    cluster.image_url,                        // image_url
+                    'en',                                     // language
+                    cluster.topic_keywords,                   // ner_entities
+                    JSON.stringify([0.1, 0.2, 0.3]),          // embedding_vector
+                    cluster.cluster_id                        // cluster_id
+                ]);
+            });
+        });
+
+        stmtCluster.finalize();
+        stmtArticle.finalize();
+        console.log("Seeding complete.");
+    });
 }
 
 // Routes
@@ -109,14 +176,15 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/stories', (req, res) => {
     const filter = req.query.filter || 'all';
-    let query = "SELECT * FROM stories";
+    let query = "SELECT * FROM clusters";
     
+    // Map existing frontend filters to new DB structure
     if (filter === 'blindspot') {
         query += " WHERE blindspot IS NOT NULL";
     } else if (filter === 'hero') {
-        query += " WHERE id = 'story-hero-1'";
+        query += " WHERE cluster_id = 'story-hero-1'";
     } else if (filter === 'briefing') {
-        query += " WHERE id = 'story-1'";
+        query += " WHERE cluster_id = 'story-1'";
     }
 
     db.all(query, [], async (err, rows) => {
@@ -128,37 +196,43 @@ app.get('/api/stories', (req, res) => {
         try {
             const stories = await Promise.all(rows.map(async (row) => {
                 const articles = await new Promise((resolve, reject) => {
-                    db.all("SELECT * FROM articles WHERE story_id = ?", [row.id], (err, aRows) => {
+                    db.all("SELECT * FROM articles WHERE cluster_id = ?", [row.cluster_id], (err, aRows) => {
                         if (err) reject(err);
                         else resolve(aRows || []);
                     });
                 });
 
                 return {
-                    id: row.id,
-                    title: row.title,
+                    id: row.cluster_id,
+                    title: row.topic_label,
                     summary: row.summary,
                     aiSummaryPoints: JSON.parse(row.ai_summary || '[]'),
-                    topic: row.topic,
-                    totalSources: row.total_sources,
-                    lastUpdated: row.last_updated,
-                    biasDistribution: JSON.parse(row.bias_dist || '{}'),
+                    topic: row.category,
+                    totalSources: row.source_count,
+                    lastUpdated: row.updated_at, 
+                    biasDistribution: JSON.parse(row.bias_distribution || '{}'),
                     blindspot: row.blindspot,
-                    entities: JSON.parse(row.entities || '[]'),
+                    entities: JSON.parse(row.topic_keywords || '[]'),
                     imageUrl: row.image_url,
                     articles: articles.map(a => ({
-                        id: a.id,
-                        storyId: a.story_id,
+                        id: a.article_id,
+                        storyId: a.cluster_id,
                         sourceId: a.source_id,
+                        sourceName: a.source_name,
                         title: a.title,
-                        url: a.url,
-                        timestamp: a.timestamp
+                        url: a.source_url,
+                        timestamp: a.published_at,
+                        summary: a.summary,
+                        language: a.language,
+                        nerEntities: JSON.parse(a.ner_entities || '[]'),
+                        embeddingVector: JSON.parse(a.embedding_vector || '[]') // Mapped correctly
                     }))
                 };
             }));
 
             if (filter === 'top') {
-                 res.json(stories.slice(2, 6));
+                 // Return stories that aren't hero or briefing for 'top' section
+                 res.json(stories.filter(s => s.id !== 'story-hero-1' && s.id !== 'story-1').slice(0, 5));
             } else {
                  res.json(stories);
             }
@@ -171,7 +245,7 @@ app.get('/api/stories', (req, res) => {
 
 app.get('/api/stories/:id', (req, res) => {
     const id = req.params.id;
-    db.get("SELECT * FROM stories WHERE id = ?", [id], (err, row) => {
+    db.get("SELECT * FROM clusters WHERE cluster_id = ?", [id], (err, row) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
@@ -181,31 +255,36 @@ app.get('/api/stories/:id', (req, res) => {
             return;
         }
 
-        db.all("SELECT * FROM articles WHERE story_id = ?", [id], (err, articles) => {
+        db.all("SELECT * FROM articles WHERE cluster_id = ?", [id], (err, articles) => {
             if (err) {
                 res.status(500).json({ error: err.message });
                 return;
             }
 
             const story = {
-                id: row.id,
-                title: row.title,
+                id: row.cluster_id,
+                title: row.topic_label,
                 summary: row.summary,
                 aiSummaryPoints: JSON.parse(row.ai_summary || '[]'),
-                topic: row.topic,
-                totalSources: row.total_sources,
-                lastUpdated: row.last_updated,
-                biasDistribution: JSON.parse(row.bias_dist || '{}'),
+                topic: row.category,
+                totalSources: row.source_count,
+                lastUpdated: row.updated_at,
+                biasDistribution: JSON.parse(row.bias_distribution || '{}'),
                 blindspot: row.blindspot,
-                entities: JSON.parse(row.entities || '[]'),
+                entities: JSON.parse(row.topic_keywords || '[]'),
                 imageUrl: row.image_url,
                 articles: (articles || []).map(a => ({
-                    id: a.id,
-                    storyId: a.story_id,
+                    id: a.article_id,
+                    storyId: a.cluster_id,
                     sourceId: a.source_id,
+                    sourceName: a.source_name,
                     title: a.title,
-                    url: a.url,
-                    timestamp: a.timestamp
+                    url: a.source_url,
+                    timestamp: a.published_at,
+                    summary: a.summary,
+                    language: a.language,
+                    nerEntities: JSON.parse(a.ner_entities || '[]'),
+                    embeddingVector: JSON.parse(a.embedding_vector || '[]')
                 }))
             };
             res.json(story);

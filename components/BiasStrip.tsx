@@ -9,8 +9,7 @@ interface BiasStripProps {
 }
 
 export const BiasStrip: React.FC<BiasStripProps> = ({ distribution, className = '', variant = 'thick', showLabels = false }) => {
-  // Safe destructuring with defaults in case data is malformed
-  const { left = 0, center = 0, right = 0 } = distribution || {};
+  const { left, center, right } = distribution;
 
   // Colors based on Ground News screenshot style
   // Left: Blue, Center: Gray/White, Right: Red/Orange

@@ -1,0 +1,7 @@
+sentence-transformers==2.2.2
+torch
+numpy
+scikit-learn
+feedparser
+gliner
+tqdm

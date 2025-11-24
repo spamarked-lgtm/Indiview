@@ -2,7 +2,6 @@ import React from 'react';
 import { Article, Source } from '../types';
 import { SOURCES_DB } from '../constants';
 import { ExternalLink, Clock } from 'lucide-react';
-import { FactualityBadge } from './FactualityBadge';
 
 interface ArticleListProps {
   articles: Article[];
@@ -31,7 +30,6 @@ export const ArticleList: React.FC<ArticleListProps> = ({ articles, title, heade
                 <div className="flex justify-between items-start mb-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-xs text-gray-900">{source?.name || article.sourceId}</span>
-                    {source && <FactualityBadge rating={source.factuality} />}
                   </div>
                 </div>
                 <a href={article.url} className="block hover:underline decoration-gray-400">

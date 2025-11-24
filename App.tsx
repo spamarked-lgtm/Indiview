@@ -1,14 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { BiasStrip } from './components/BiasStrip';
 import { StoryDetailView } from './views/StoryDetailView';
-import { getStories, getStoryById } from './services/mockData';
+import { api, initDatabase } from './services/database';
 import { ViewState, Story } from './types';
 import { ShieldAlert, Info, ArrowRight, Eye, PlayCircle, Star, Award, Newspaper } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('feed');
   const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
+  
+  // Backend Data State
+  const [stories, setStories] = useState<Record<string, Story[]>>({
+      hero: [],
+      briefing: [],
+      top: [],
+      blindspot: [],
+      all: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [currentStory, setCurrentStory] = useState<Story | undefined>(undefined);
+
+  // Initialize Backend Connection
+  useEffect(() => {
+    const fetchData = async () => {
+        await initDatabase();
+        
+        const [hero, briefing, top, blindspot, all] = await Promise.all([
+            api.getStories('hero'),
+            api.getStories('briefing'),
+            api.getStories('top'),
+            api.getStories('blindspot'),
+            api.getStories('all')
+        ]);
+
+        setStories({ hero, briefing, top, blindspot, all });
+        setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch specific story when detailed view opens
+  useEffect(() => {
+    const fetchDetail = async () => {
+        if (selectedStoryId) {
+            const story = await api.getStoryById(selectedStoryId);
+            setCurrentStory(story);
+        }
+    };
+    fetchDetail();
+  }, [selectedStoryId]);
+
 
   const handleStoryClick = (id: string) => {
     setSelectedStoryId(id);
@@ -18,8 +61,20 @@ const App: React.FC = () => {
 
   const handleBack = () => {
     setSelectedStoryId(null);
+    setCurrentStory(undefined);
     setCurrentView('feed');
   };
+
+  if (loading) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+              <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                  <p className="text-gray-500 font-medium">Connecting to Database...</p>
+              </div>
+          </div>
+      );
+  }
 
   // --- Components Specific to Home Page Layout ---
 
@@ -134,7 +189,7 @@ const App: React.FC = () => {
              <h4 className="font-bold text-sm leading-snug mb-3 text-gray-900">{story.title}</h4>
              <div className="flex items-center gap-2 text-[10px] text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
                 <ShieldAlert size={12} className="text-gray-400" />
-                Mostly Mixed or Lower Factuality Sources
+                Blindspot Analysis
              </div>
         </div>
     </div>
@@ -164,11 +219,6 @@ const App: React.FC = () => {
   );
 
   const RenderHome = () => {
-    const heroStory = getStories('hero')[0];
-    const briefingStory = getStories('briefing')[0];
-    const topStories = getStories('top');
-    const blindspotStories = getStories('blindspot');
-
     return (
         <>
             {/* Promo Hero */}
@@ -194,14 +244,14 @@ const App: React.FC = () => {
                     {/* Left Column: Daily Briefing & Top News */}
                     <div className="md:col-span-3 space-y-8">
                         <div>
-                            <DailyBriefingCard story={briefingStory} />
+                            {stories.briefing[0] && <DailyBriefingCard story={stories.briefing[0]} />}
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-4">
                             <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
                                 <Newspaper size={18} /> Top News Stories
                             </h3>
                             <div className="flex flex-col">
-                                {topStories.map(story => <TopStoryRow key={story.id} story={story} />)}
+                                {stories.top.map(story => <TopStoryRow key={story.id} story={story} />)}
                             </div>
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -214,14 +264,14 @@ const App: React.FC = () => {
 
                     {/* Center Column: Hero & Feed */}
                     <div className="md:col-span-6">
-                        <HeroCard story={heroStory} />
+                        {stories.hero[0] && <HeroCard story={stories.hero[0]} />}
                         <div className="bg-white rounded-xl border border-gray-200 p-2 sm:p-6">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold text-xl text-gray-900">Latest Stories</h3>
                             </div>
                             <div className="flex flex-col">
-                                {topStories.map(story => <FeedCard key={story.id + 'feed'} story={story} />)}
-                                {blindspotStories.map(story => <FeedCard key={story.id + 'feed2'} story={story} />)}
+                                {stories.top.map(story => <FeedCard key={story.id + 'feed'} story={story} />)}
+                                {stories.blindspot.map(story => <FeedCard key={story.id + 'feed2'} story={story} />)}
                             </div>
                             <button className="w-full mt-6 py-3 border border-gray-300 rounded-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors">
                                 Load More Stories
@@ -240,7 +290,7 @@ const App: React.FC = () => {
                                 Stories disproportionately covered by one side of the political spectrum. <a href="#" className="underline font-bold">Learn more</a>
                              </p>
                              
-                             {blindspotStories.map(story => <BlindspotCard key={story.id} story={story} />)}
+                             {stories.blindspot.map(story => <BlindspotCard key={story.id} story={story} />)}
 
                              <button onClick={() => setCurrentView('blindspots')} className="w-full mt-2 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">
                                 View Blindspot Feed
@@ -293,10 +343,8 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (currentView === 'story_detail' && selectedStoryId) {
-      const story = getStoryById(selectedStoryId);
-      if (!story) return <div>Story not found</div>;
-      return <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8"><StoryDetailView story={story} onBack={handleBack} /></div>;
+    if (currentView === 'story_detail' && currentStory) {
+      return <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8"><StoryDetailView story={currentStory} onBack={handleBack} /></div>;
     }
 
     if (currentView === 'feed') {
@@ -304,12 +352,11 @@ const App: React.FC = () => {
     }
 
     // Blindspot full view fallback
-    const stories = getStories('blindspot');
     return (
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h2 className="text-3xl font-bold mb-6">Blindspot Feed</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {stories.map(story => (
+                {stories.blindspot.map(story => (
                     <div key={story.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer" onClick={() => handleStoryClick(story.id)}>
                         <img src={story.imageUrl} className="w-full h-48 object-cover"/>
                         <div className="p-4">

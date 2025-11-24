@@ -8,19 +8,10 @@ export enum Bias {
   FarRight = 'Far-Right',
 }
 
-export enum Factuality {
-  VeryHigh = 'Very High',
-  High = 'High',
-  Mixed = 'Mixed',
-  Low = 'Low',
-  VeryLow = 'Very Low',
-}
-
 export interface Source {
   id: string;
   name: string;
   bias: Bias;
-  factuality: Factuality;
   icon?: string;
   region?: string; // e.g., National, South, North
 }

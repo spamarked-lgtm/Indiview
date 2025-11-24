@@ -1,0 +1,102 @@
+const DB_SEED_DATA = [
+  {
+    id: 'story-hero-1',
+    title: 'Trump’s Government Efficiency Department Disbands Eight Months Before Mandate Ends',
+    summary: 'The Department of Government Efficiency, led by Elon Musk and Vivek Ramaswamy, is winding down operations earlier than expected.',
+    ai_summary: JSON.stringify(['DOGE to shut down 8 months early.', 'Musk claims mission accomplished.', 'Critics argue substantial waste remains.']),
+    topic: 'US Politics',
+    total_sources: 394,
+    last_updated: '7m read',
+    bias_dist: JSON.stringify({ left: 42, center: 19, right: 39 }),
+    blindspot: null,
+    entities: JSON.stringify(['Elon Musk', 'Vivek Ramaswamy', 'DOGE']),
+    image_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1632&q=80',
+    source_ids: ['the-hindu', 'ndtv', 'republic-world', 'opindia']
+  },
+  {
+    id: 'story-1',
+    title: 'Israel Strikes Hezbollah Chief in First Beirut Attack Since June',
+    summary: 'Israel\'s first strike on Beirut since June hit Haret Hreik, targeting Hezbollah chief of staff Ali Tabtabai.',
+    ai_summary: JSON.stringify(['Targeted strike in Beirut suburbs.', 'At least five killed, 28 wounded.', 'Escalation in Israel-Hezbollah conflict.']),
+    topic: 'Israel-Gaza',
+    total_sources: 45,
+    last_updated: '2 hours ago',
+    bias_dist: JSON.stringify({ left: 45, center: 10, right: 45 }),
+    blindspot: null,
+    entities: JSON.stringify(['Hezbollah', 'Beirut', 'Israel']),
+    image_url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    source_ids: ['the-wire', 'scroll', 'ndtv', 'republic-world', 'times-of-india']
+  },
+  {
+    id: 'story-2',
+    title: 'No recession risk for US economy as a whole after $11 billion shutdown hit, Bessent says',
+    summary: 'Treasury Secretary Scott Bessent assures the public that the recent government shutdown will not trigger a recession.',
+    ai_summary: JSON.stringify(['Shutdown cost estimated at $11 billion.', 'Economy remains resilient.', 'Inflation cooling down.']),
+    topic: 'Business & Markets',
+    total_sources: 9,
+    last_updated: '5 hours ago',
+    bias_dist: JSON.stringify({ left: 20, center: 56, right: 24 }),
+    blindspot: null,
+    entities: JSON.stringify(['Scott Bessent', 'US Economy', 'Recession']),
+    image_url: 'https://images.unsplash.com/photo-1526304640152-d4619684e484?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    source_ids: ['the-hindu', 'ndtv', 'indian-express']
+  },
+  {
+    id: 'story-3',
+    title: 'Rep. Marjorie Taylor Greene to Resign from US Congress After Fallout with Trump',
+    summary: 'MTG announces resignation following a public disagreement with former President Trump over policy direction.',
+    ai_summary: JSON.stringify(['Resignation effective next month.', 'Cites irreconcilable differences.', 'Speculation on future political career.']),
+    topic: 'US Politics',
+    total_sources: 355,
+    last_updated: '1 day ago',
+    bias_dist: JSON.stringify({ left: 25, center: 45, right: 30 }),
+    blindspot: null,
+    entities: JSON.stringify(['Marjorie Taylor Greene', 'Donald Trump']),
+    image_url: 'https://images.unsplash.com/photo-1555848962-6e79363ec58f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    source_ids: ['the-wire', 'republic-world']
+  },
+  {
+    id: 'story-4',
+    title: 'Zelenskyy says Ukraine is grateful for efforts by US, Trump',
+    summary: 'Ukrainian President expresses gratitude for continued support amidst changing US political landscape.',
+    ai_summary: JSON.stringify(['Zelenskyy meets US officials.', 'Discusses future aid packages.', 'Emphasizes bipartisan support.']),
+    topic: 'Ukraine War',
+    total_sources: 10,
+    last_updated: '30 mins ago',
+    bias_dist: JSON.stringify({ left: 30, center: 30, right: 40 }),
+    blindspot: 'Right',
+    entities: JSON.stringify(['Zelenskyy', 'Ukraine', 'Trump']),
+    image_url: 'https://images.unsplash.com/photo-1605152276897-4f618f831968?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    source_ids: ['the-hindu', 'ndtv', 'republic-world']
+  },
+  {
+    id: 'story-5',
+    title: 'US Set to Label Muslim Brotherhood a Foreign Terrorist Organization: Report',
+    summary: 'Reports indicate the administration is moving to designate the Muslim Brotherhood as a terrorist organization.',
+    ai_summary: JSON.stringify(['Move debated for years.', 'Potential diplomatic fallout.', 'Support from certain allies.']),
+    topic: 'World',
+    total_sources: 120,
+    last_updated: '1 day ago',
+    bias_dist: JSON.stringify({ left: 0, center: 0, right: 100 }),
+    blindspot: 'Left',
+    entities: JSON.stringify(['Muslim Brotherhood', 'US State Dept']),
+    image_url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    source_ids: ['republic-world', 'opindia']
+  },
+  {
+    id: 'story-6',
+    title: 'Daughter of Holocaust Survivor Among Those Arrested at Palestine Action Protest',
+    summary: 'Protests at a defense manufacturing facility led to several arrests, including descendants of Holocaust survivors.',
+    ai_summary: JSON.stringify(['Protestors blocked factory entrance.', 'Police arrested 12 individuals.', 'Activists claim factory supplies IDF.']),
+    topic: 'Israel-Gaza',
+    total_sources: 45,
+    last_updated: '2 days ago',
+    bias_dist: JSON.stringify({ left: 46, center: 45, right: 9 }),
+    blindspot: 'Right',
+    entities: JSON.stringify(['Palestine Action', 'Protest']),
+    image_url: 'https://images.unsplash.com/photo-1555848962-6e79363ec58f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    source_ids: ['the-wire', 'scroll', 'ndtv']
+  }
+];
+
+module.exports = { DB_SEED_DATA };
